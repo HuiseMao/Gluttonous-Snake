@@ -1,199 +1,204 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define _CRT_NON_CONFORMING_SWPRINTFS
 #undef UNICODE
-#undef _UNICODE		//
+#undef _UNICODE		
 #include <stdio.h>
 #include <stdlib.h>
 #include <graphics.h>
 #include <conio.h>
 #include <time.h>
 #include <windows.h>
+#pragma warning(disable:4996)	//½ûÓÃ°²È«¼ì²é _tcscpy¡¢_stprintf
 
-/*--------------------------------å± æ€§---------------------------*/
-#define WIDE 1170		/* çª—å£å¤§å°  WIDE * HIGHåƒç´  å°ºå¯¸éœ€ä¸ºSIZEçš„æ•´æ•°å€ï¼Œ  	 */
-#define HIGH 640		/*	è›‡çš„è¡ŒåŠ¨åœ¨A(SIZE,SIZE)åˆ°B(WIDE-FORM-SIZE,HIGH-SIZE)ä¹‹é—´çš„çŸ©å½¢å†…*/
-#define FORM 250		/*	è®¾ç½®æ–‡å­—è¾¹æ¡†å®½åº¦  */
-#define SIZE 40				//æ¯èŠ‚è›‡çš„å°ºå¯¸
-#define LEN 100				//è›‡çš„æœ€é•¿é•¿åº¦
-#define COLOUR RGB(rand()%255,rand()%255,rand()%255)	//å½©è‰²
+/*--------------------------------Êô ĞÔ---------------------------*/
+#define WIDTH 1170		/*	´°¿Ú´óĞ¡  WIDTH * HIGHT ÏñËØ ³ß´çĞèÎª SIZE µÄÕûÊı±¶£¬  	 */
+#define HIGHT 640		/*	ÉßµÄĞĞ¶¯ÔÚ A(SIZE,SIZE)µ½ B(WIDTH-FORM-SIZE,HIGHT-SIZE)Ö®¼äµÄ¾ØĞÎÄÚ*/
+#define FORM 250		/*	ÉèÖÃÎÄ×Ö±ß¿ò¿í¶È	*/
+#define SIZE 40			/*	Ã¿½ÚÉßµÄ³ß´ç		*/
 
-/*  æ–°å¢å…¨å±€å˜é‡ ï¼š é»˜è®¤åˆå§‹é•¿åº¦ ã€é»˜è®¤èˆŒå¤´æ–¹å‘ */
-const int g_start = 3;
-const int g_toward = right;
+#define COLOUR RGB(rand()%255,rand()%255,rand()%255)	/*	²ÊÉ« */
 
-static int speed = 100;		//é€Ÿåº¦(æ§åˆ¶åˆ·æ–°çš„æ—¶é—´é—´éš”)
+// Ã¶¾ÙÖµ
+enum Direction { right = 77, left = 75, down = 80, up = 72 };	//Ã¶¾Ù·½ÏòÖµ
+enum Control   { F1 = 59, F2 = 60, Esc = 27 };					//Ã¶¾Ù¹¦ÄÜ¼üÖµ
 
-enum Direction { right = 77, left = 75, down = 80, up = 72, Esc = 27 };//æšä¸¾æ–¹å‘å€¼
+// È«¾Ö±äÁ¿
+static int g_speed = 100;			//	ËÙ¶È(¿ØÖÆË¢ĞÂµÄÊ±¼ä¼ä¸ô)
+static int g_status = 0;			//	ÓÎÏ·½áÊø±êÖ¾
+
+// È«¾Ö³£Á¿
+const char* IMAGE_PATH = "image";	//	ÌùÍ¼×ÊÔ´ËùÔÚÂ·¾¶
+const int SNAKE_LENGTH = 3;			//	³õÊ¼£¬Ä¬ÈÏ³õÊ¼³¤¶È
+const int SNAKE_TOWARD = right;		//	³õÊ¼£¬Ä¬ÈÏÉßÍ··½Ïò
+const int MAX_SIZE = 100;			//	ÉßµÄ×î³¤³¤¶È
+const int SHOW_TAIL = 0;			//	ÊÇ·ñÕ¹Ê¾ÉßÎ²°Í£¬ÉßÎ²²»¼ÆÈë³¤¶È
 
 
-/*---------------------------èµ„æº-------------------------------------*/
-//è›‡
+
+/*---------------------------×ÊÔ´-------------------------------------*/
+//Éß
 typedef struct _snake
 {
-	int x[LEN];				//åæ ‡â€”X
-	int y[LEN];				//åæ ‡â€”Y
-	int len;				//é•¿åº¦
-	int count;				//åˆ†æ•°
-	int direction;			//æ–¹å‘
+	int x[MAX_SIZE];		//×ø±ê¡ªX
+	int y[MAX_SIZE];		//×ø±ê¡ªY
+	int len;				//µ±Ç°³¤¶È
+	int count;				//µ±Ç°·ÖÊı
+	int direction;			//ÉßÍ··½Ïò
 }Snake;
 
-//é£Ÿç‰©
+//Ê³Îï
 typedef struct _food
 {
-	int x;					//åæ ‡â€”X
-	int y;					//åæ ‡â€”Y
-	int flg;				//æ ‡è®°é£Ÿç‰©æ˜¯å¦å·²ç»å‡ºç°
+	int x;					//×ø±ê¡ªX
+	int y;					//×ø±ê¡ªY
+	int flg;				//±ê¼ÇÊ³ÎïÊÇ·ñÒÑ¾­³öÏÖ
 }Food;
 
+// Í¼Æ¬¶ÔÏó
+IMAGE img[8];		//Ç½£¬ÉßÍ·£¬ÉíÌå£¬ÉßÎ²£¬Ê³Îï
+IMAGE tips[4];		//ÆäËû½çÃæÍ¼Æ¬
 
-IMAGE img[8];		//å¢™ï¼Œè›‡å¤´ï¼Œèº«ä½“,è›‡å°¾ï¼Œé£Ÿç‰©
-char name[8][15] = { "wall","snakeHead","body","food","snakeTailUp","snakeTailDown","snakeTailLeft","snakeTailRight" };	//æ ‡è®°å›¾ç‰‡å˜é‡å
-IMAGE tips[4];		//å…¶ä»–ç•Œé¢å›¾ç‰‡
-char tipsName[4][15] = { "snake","label","gameover","start" };	//æ ‡è®°å›¾ç‰‡å˜é‡å
-//åŠ è½½å›¾ç‰‡
+// ±ê¼ÇÍ¼Æ¬±äÁ¿Ãû
+char name[8][15] = { "wall","snakeHead","body","food","snakeTailUp","snakeTailDown","snakeTailLeft","snakeTailRight" };
+char tipsName[4][15] = { "snake","label","gameover","start" };	
+
+//¼ÓÔØÍ¼Æ¬
 void loadResources()
 {
 	for (int i = 0; i < 8; i++)
 	{
-		char filename[20] = "";
-		sprintf_s(filename, "%s.bmp", name[i]);
+		char filename[30] = "";
+		sprintf_s(filename, "%s/%s.png", IMAGE_PATH, name[i]);
 		loadimage(img + i, filename);
 	}
 	for (int i = 0; i < 4; i++)
 	{
-		char filename[20] = "";
-		sprintf_s(filename, "%s.bmp", tipsName[i]);
+		char filename[30] = "";
+		sprintf_s(filename, "%s/%s.png", IMAGE_PATH, tipsName[i]);
 		loadimage(tips + i, filename);
 	}
 }
 
 /************************************************************/
-//å˜é‡
-Snake snake;		//è›‡
-Food  food;			//é£Ÿç‰©
-//å‡½æ•°
-void PrintForm();		//æ–‡å­—æç¤ºæ¡†
-void Init_Snake();		//åˆå§‹åŒ–è›‡
-void Init_Food();		//åˆå§‹åŒ–é£Ÿç‰©
-void ShowSnake();		//è´´å›¾ç”»è›‡
-void ShowFood();		//è´´å›¾ç”»é£Ÿç‰©
-void MoveSnake();		//è›‡çš„ç§»åŠ¨
-void KeyDown();			//æ§åˆ¶
-void EatFood();			//åƒé£Ÿç‰©
-int	 GameOver();		//æ¸¸æˆç»“æŸ
-void DrawWall();		//ç”»å¢™
+//±äÁ¿
+Snake snake;		//Éß
+Food  food;			//Ê³Îï
+//º¯Êı
+void PrintForm();		//ÎÄ×ÖÌáÊ¾¿ò
+void Init_Snake();		//³õÊ¼»¯Éß
+void Init_Food();		//³õÊ¼»¯Ê³Îï
+void ShowSnake();		//ÌùÍ¼»­Éß
+void ShowFood();		//ÌùÍ¼»­Ê³Îï
+void MoveSnake();		//ÉßµÄÒÆ¶¯
+void KeyDown();			//¿ØÖÆ
+void EatFood();			//³ÔÊ³Îï
+void GameOver();		//ÓÎÏ·½áÊø
+int EndScreen();		//½áÊø»­Ãæ
+void DrawWall();		//»­Ç½
 
 
 
-//å³ä¾§å±•ç¤ºåŒºåŸŸ
+//ÓÒ²àÕ¹Ê¾ÇøÓò
 void PrintForm()
 {
-	//setlinecolor(BLACK);	//ç”»çº¿é¢œè‰²		/*ä¸»å‡½æ•°ä¸­å·²å­˜åœ¨*/
-	//setfillcolor(WHITE);	//å¡«å……é¢œè‰²
-	fillrectangle(0, 0, WIDE, HIGH - 1);	//è¾¹æ¡†
+	fillrectangle(0, 0, WIDTH, HIGHT - 1);	//±ß¿ò
 
 	LOGFONT f;
-	gettextstyle(&f);                     // è·å–å½“å‰å­—ä½“è®¾ç½®
-	f.lfHeight = 30;                      // è®¾ç½®å­—ä½“é«˜åº¦ä¸º 48
-	_tcscpy(f.lfFaceName, _T("å¹¼åœ†"));    // è®¾ç½®å­—ä½“ä¸ºâ€œé»‘ä½“â€
-	f.lfQuality = ANTIALIASED_QUALITY;    // è®¾ç½®è¾“å‡ºæ•ˆæœä¸ºæŠ—é”¯é½¿  
-	settextstyle(&f);                     // è®¾ç½®å­—ä½“æ ·å¼
+	gettextstyle(&f);                     // »ñÈ¡µ±Ç°×ÖÌåÉèÖÃ
+	f.lfHeight = 30;                      // ÉèÖÃ×ÖÌå¸ß¶ÈÎª 48
+	_tcscpy(f.lfFaceName, _T("Ó×Ô²"));    // ÉèÖÃ×ÖÌåÎª¡°ºÚÌå¡±
+	f.lfQuality = ANTIALIASED_QUALITY;    // ÉèÖÃÊä³öĞ§¹ûÎª¿¹¾â³İ  
+	settextstyle(&f);                     // ÉèÖÃ×ÖÌåÑùÊ½
 
-	putimage(WIDE - FORM, 0, &tips[0]);			//è´´å›¾â€”â€”å¡é€šè´ªåƒè›‡
-	//putimage(WIDE-FORM,250,&tips[1]);		//æç¤ºæ¡†è´´å›¾ï¼Œæ“ä½œæ‰‹å†Œ
-	setbkmode(TRANSPARENT);					//æ–‡å­—é€æ˜æ–¹å¼
-	settextcolor(LIGHTBLUE);				//æ–‡å­—é¢œè‰²
+	putimage(WIDTH - FORM, 0, &tips[0]);	//ÌùÍ¼¡ª¡ª¿¨Í¨Ì°³ÔÉß
+	//putimage(WIDTH-FORM,250,&tips[1]);	//ÌáÊ¾¿òÌùÍ¼£¬²Ù×÷ÊÖ²á
+	setbkmode(TRANSPARENT);					//ÎÄ×ÖÍ¸Ã÷·½Ê½
+	settextcolor(LIGHTBLUE);				//ÎÄ×ÖÑÕÉ«
 	TCHAR  str[3][50];
-	_stprintf(str[0], _T("  å¾—åˆ†: %3d åˆ†"), snake.count);
-	_stprintf(str[1], _T("  é€Ÿåº¦: %3d çº§"), (100 - speed) / 20);
-	_stprintf(str[2], _T("  é•¿åº¦: %3d èŠ‚"), snake.len);
+	_stprintf(str[0], _T("  µÃ·Ö: %3d ·Ö"), snake.count);
+	_stprintf(str[1], _T("  ËÙ¶È: %3d ¼¶"), (100 - g_speed) / 20);
+	_stprintf(str[2], _T("  ³¤¶È: %3d ½Ú"), snake.len);
 	for (int i = 0; i < 3; ++i)
 	{
-		outtextxy(WIDE - FORM + 10, i * 40 + 250, str[i]);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
+		outtextxy(WIDTH - FORM + 10, i * 40 + 250, str[i]);	//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
 	}
 
 	TCHAR  str2[11][50];
-	_stprintf(str2[0], _T(" æç¤º:"));
-	_stprintf(str2[1], _T("  ä¸€æšæœå®10åˆ†,è›‡æœ€é•¿  "));
-	_stprintf(str2[2], _T("  100èŠ‚ï¼Œä¸ºé€šå…³ã€‚æ’å¢™,"));
-	_stprintf(str2[3], _T("  æˆ–æ’åˆ°è‡ªå·±ï¼Œæ¸¸æˆå¤±è´¥"));
+	_stprintf(str2[0], _T(" ÌáÊ¾:"));
+	_stprintf(str2[1], _T("  Ò»Ã¶¹ûÊµ10·Ö£¬Éß×î³¤  "));
+	_stprintf(str2[2], _T("  100½Ú£¬ÎªÍ¨¹Ø¡£×²Ç½,"));
+	_stprintf(str2[3], _T("  »ò×²µ½×Ô¼º£¬ÓÎÏ·Ê§°Ü"));
 	_stprintf(str2[4], _T("      "));
-	_stprintf(str2[5], _T(" æŒ‰é”®:"));
-	_stprintf(str2[6], _T("     F1 : åŠ é€Ÿ "));
-	_stprintf(str2[7], _T("     F2 : å‡é€Ÿ"));
-	_stprintf(str2[8], _T("    ç©ºæ ¼: æš‚åœ"));
-	_stprintf(str2[9], _T("    Esc : é€€å‡º "));
+	_stprintf(str2[5], _T(" °´¼ü:"));
+	_stprintf(str2[6], _T("     F1 : ¼ÓËÙ "));
+	_stprintf(str2[7], _T("     F2 : ¼õËÙ"));
+	_stprintf(str2[8], _T("    ¿Õ¸ñ: ÔİÍ£"));
+	_stprintf(str2[9], _T("    Esc : ÍË³ö "));
 	_stprintf(str2[10], _T("     "));
-	settextcolor(BLACK);			//æ–‡å­—é¢œè‰²
-	f.lfHeight = 20;                      // è®¾ç½®å­—ä½“é«˜åº¦ä¸º 20
-	settextstyle(&f);                     // è®¾ç½®å­—ä½“æ ·å¼
+	settextcolor(BLACK);				//ÎÄ×ÖÑÕÉ«
+	f.lfHeight = 20;					// ÉèÖÃ×ÖÌå¸ß¶ÈÎª 20
+	settextstyle(&f);					// ÉèÖÃ×ÖÌåÑùÊ½
 	for (int i = 0; i < 11; i++)
 	{
-		outtextxy(WIDE - FORM + 10, 400 + i * 20, str2[i]);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
+		outtextxy(WIDTH - FORM + 10, 400 + i * 20, str2[i]);	//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
 	}
 
 }
 
 int main()
 {
+	initgraph(WIDTH, HIGHT);	//³õÊ¼»¯´°¿Ú´óĞ¡
+	loadResources();			//¼ÓÔØÍ¼Æ¬
 
-	initgraph(WIDE, HIGH);		//åˆå§‹åŒ–çª—å£å¤§å°
-	loadResources();			//åŠ è½½å›¾ç‰‡
+	setlinecolor(BLACK);		//»­ÏßÑÕÉ«
+	setfillcolor(WHITE);		//Ìî³äÑÕÉ«
+	fillrectangle(-1, -1, WIDTH, HIGHT);	//±ß¿ò
 
-	setlinecolor(BLACK);		//ç”»çº¿é¢œè‰²
-	setfillcolor(WHITE);		//å¡«å……é¢œè‰²
-	fillrectangle(-1, -1, WIDE, HIGH);	//è¾¹æ¡†
+	putimage(200, 50, &tips[3]);	
+	_getch();					// °´ÏÂÈÎÒâ¼ü¿ªÊ¼
 
-	putimage(200, 50, &tips[3]);
-	while (!_kbhit()); // æ²¡æœ‰æŒ‰é”®å°±æ­»å¾ªç¯   æŒ‰ä¸‹ä»»æ„é”®å¼€å§‹
-	//æ¸…ç©ºç¼“å†²åŒº
-	FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+	Init_Snake();				//³õÊ¼»¯Éß
+	Init_Food();				//³õÊ¼»¯Ê³Îï
 
-	Init_Snake();				//åˆå§‹åŒ–è›‡
-	Init_Food();				//åˆå§‹åŒ–é£Ÿç‰©
-
-	while (true)//å¼ºé€€
+	while (true)//Ç¿ÍË
 	{
 		if (food.flg == 0)
 		{
-			Init_Food();		//åˆå§‹åŒ–é£Ÿç‰©
+			Init_Food();		//³õÊ¼»¯Ê³Îï
 		}
 
 		BeginBatchDraw();
-		cleardevice();			//åˆ·æ–°çª—å£
-		PrintForm();			//æ‰“å°è¡¨æ¡†
-		DrawWall();				//ç”»å¢™
-		ShowFood();				//ç”»é£Ÿç‰©
-		ShowSnake();			//ç”»è›‡
+		cleardevice();			//Ë¢ĞÂ´°¿Ú
+		PrintForm();			//´òÓ¡±í¿ò
+		DrawWall();				//»­Ç½
+		ShowFood();				//»­Ê³Îï
+		ShowSnake();			//»­Éß
 		EndBatchDraw();
 
 		if (_kbhit())
 		{
-			KeyDown();			//ç©å®¶æ§åˆ¶è›‡ç§»åŠ¨
-			//æ¸…ç©ºç¼“å†²åŒº
-			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+			KeyDown();			//Íæ¼Ò¿ØÖÆÉßÒÆ¶¯
 		}
 
-		EatFood();
-		MoveSnake();			//è›‡ç§»åŠ¨
+		MoveSnake();			//ÉßÒÆ¶¯
+		EatFood();				//³ÔÊ³Îï
 
-		if (GameOver() == 1)		//æ¸¸æˆç»“æŸæ¡ä»¶
+		GameOver();				//¼ì²éÓÎÏ·ÊÇ·ñ½áÊø£¬ÉèÖÃ½áÊø±êÖ¾Î»
+		if(EndScreen() == 1)	//ÓÎÏ·½áÊø£¬Õ¹Ê¾³É¼¨		
 		{
-			//ShowSnake();			//ç”»è›‡,æ˜¾ç¤ºæ­»äº¡çŠ¶æ€
 			break;
 		}
-		Sleep(speed);			//æ§åˆ¶é€Ÿåº¦
+		Sleep(g_speed);			//¿ØÖÆËÙ¶È
 	}
 
-	_getch();
+	system("pause");
 	closegraph();
 	return 0;
 }
-/*--------------------------è›‡çš„åŠŸèƒ½å‡½æ•°--------------------------*/
-//åˆå§‹åŒ–è›‡
+/*--------------------------ÉßµÄ¹¦ÄÜº¯Êı--------------------------*/
+
+//³õÊ¼»¯Éß
 void Init_Snake()
 {
-	//åˆå§‹åŒ–å‰ä¸‰èŠ‚è›‡
+	//³õÊ¼»¯Ç°Èı½ÚÉß
 	snake.x[0] = SIZE * 3;
 	snake.y[0] = SIZE;
 
@@ -203,82 +208,98 @@ void Init_Snake()
 	snake.x[2] = SIZE;
 	snake.y[2] = SIZE;
 
-	snake.len = g_start;		// è›‡æœ€åˆé•¿g_startï¼Œç›®å‰è®¾ç½®ä¸º3ï¼Œ
-	snake.count = 0;
-	snake.direction = g_toward;	//è›‡å¤´é»˜è®¤å‘å³
+	/*	ËµÃ÷:
+	*	1. ÆäÓàÉßÄ¬ÈÏ×ø±êÎª 0¡£
+	*		Èç¹û³õÊ¼³¤¶È SNAKE_LENGTH ÉèÖÃÎª¸ü³¤£¬Ò²ÎŞĞè³õÊ¼»¯ÆäËû×ø±ê
+	*	2. ÒòÎªÇ°Èı½ÚÉßÎ»ÖÃ¹Ì¶¨¡£
+	*		Òò´Ë£¬ÓÎÏ·¿ªÊ¼Ê±µÄS NAKE_TOWARD ÉßÍ··½Ïò£¬Ö»ÄÜÏòÓÒ»òÏòÏÂ¡£
+	*		Èç¹û£¬ÏòÉè¶¨ÆäËûÉßÍ·³õÊ¼·½Ïò£¬ĞèÒªĞŞ¸ÄÇ° SNAKE_TOWARD ½ÚÉßµÄ×ø±ê¡£
+	*/
+
+	snake.count = 0;				// ³õÊ¼»¯·ÖÊı
+	snake.len = SNAKE_LENGTH;		// ³õÊ¼»¯³¤¶È
+	snake.direction = SNAKE_TOWARD;	// ³õÊ¼»¯ÉßÍ··½Ïò
 }
-//åˆå§‹åŒ–é£Ÿç‰©
+
+//³õÊ¼»¯Ê³Îï
 void Init_Food()
 {
-	srand((unsigned int)time(NULL));//éšæœºç§å­
-label:
-	int x = (WIDE - FORM - SIZE) / SIZE;	//é¢„ç•™ FORM åƒç´ æ˜¾ç¤ºä¿¡æ¯
-	int y = (HIGH - SIZE) / SIZE;
-	food.x = rand() % x * SIZE;	// *10 ä¿è¯é£Ÿç‰©åœ°å€ä¸ºæ•´æ•°ï¼Œä¸è›‡å¤´æ¯”è¾ƒ
-	food.y = rand() % y * SIZE;
-	//æ£€æŸ¥é£Ÿç‰©æ˜¯å¦åœ¨è›‡èº«ä¸Š
+	srand((unsigned int)time(NULL));		//Ëæ»úÖÖ×Ó
+	int x = (WIDTH - FORM - SIZE) / SIZE;	//Ô¤Áô FORM ÏñËØÏÔÊ¾ĞÅÏ¢
+	int y = (HIGHT - SIZE) / SIZE;
+
+	//¼ì²éÊ³ÎïÊÇ·ñÔÚÉßÉíÉÏ
 	int i = 0;
 	while (i < snake.len)
 	{
-		if (food.x == snake.x[i] && food.y == snake.y[i])	//é£Ÿç‰©åœ¨è›‡èº«ä¸Š
+		if (food.x == snake.x[i] && food.y == snake.y[i])	//Ê³ÎïÔÚÉßÉíÉÏ
 		{
-			goto label;
+			food.x = rand() % x * SIZE;		// *SIZE ±£Ö¤Ê³ÎïµØÖ·ÎªÕûÊı
+			food.y = rand() % y * SIZE;
 		}
-		if (food.x == 0 || food.y == 0)		//é£Ÿç‰©åœ¨ä¸Šè¾¹ç•Œæˆ–å·¦è¾¹ç•Œ
+		if (food.x == 0 || food.y == 0)		//Ê³ÎïÔÚÉÏ±ß½ç»ò×ó±ß½ç
 		{
-			goto label;
+			food.x = rand() % x * SIZE;		
+			food.y = rand() % y * SIZE;
 		}
 
 		++i;
 	}
 	food.flg = 1;
 }
-//è´´å›¾ç”»è›‡
+
+//ÌùÍ¼»­Éß
 void ShowSnake()
 {
-	/*					ç”»è›‡èº«						*/
+	/*	»­ÉßÉí	*/
 	int i;
-	for (i = 1; i < snake.len; ++i)	//è‹¥ç”»è›‡å°¾ï¼Œæ¡ä»¶ä¸º i < snake.len - 1
+	for (i = 1; i < snake.len; ++i)	//Èô»­ÉßÎ²£¬Ìõ¼şÎª i < snake.len - 1
 	{
 		putimage(snake.x[i], snake.y[i], &img[2]);
 	}
-	/*					ç”»è›‡å°¾						*/
-	//æ³¨ï¼šæ²¡æœ‰å¥½çœ‹çš„è›‡å°¾ï¼Œæš‚æ—¶ä¸è´´è›‡å°¾ï¼Œå¦‚æƒ³è´´è›‡å°¾åªéœ€æŠŠä»¥ä¸‹ æ³¨é‡Šæ®µå–æ¶ˆï¼ŒæŠŠç”»è›‡èº«çš„æ¡ä»¶å‡ä¸€ å³å¯
-	//if (snake.y[i - 1] < snake.y[i])			//å€’æ•°ç¬¬ä¸€èŠ‚åœ¨å°¾å·´çš„ä¸Šè¾¹ï¼Œè›‡å°¾å‘ä¸Š
-	//{
-	//	putimage(snake.x[i], snake.y[i], &img[4]);
-	//}	
-	//else if (snake.y[i - 1] > snake.y[i])		//å€’æ•°ç¬¬ä¸€èŠ‚åœ¨å°¾å·´çš„ä¸‹è¾¹ï¼Œè›‡å°¾å‘ä¸‹
-	//{
-	//	putimage(snake.x[i], snake.y[i], &img[5]);
-	//}	
-	//else if (snake.x[i - 1] < snake.x[i])		//å€’æ•°ç¬¬ä¸€èŠ‚åœ¨å°¾å·´çš„å·¦è¾¹ï¼Œè›‡å°¾å‘å·¦
-	//{
-	//	putimage(snake.x[i], snake.y[i], &img[6]);
-	//}
-	//else if (snake.x[i - 1] > snake.x[i])		//å€’æ•°ç¬¬ä¸€èŠ‚åœ¨å°¾å·´çš„å³è¾¹ï¼Œè›‡å°¾å‘å³
-	//{
-	//	putimage(snake.x[i], snake.y[i], &img[7]);
-	//}
-	/*					ç”»è›‡å¤´						*/
+
+	// ÊÇ·ñÕ¹Ê¾ÉßÎ²
+	if (SHOW_TAIL != 0) 
+	{
+		if (snake.y[i - 1] < snake.y[i])			//µ¹ÊıµÚÒ»½ÚÔÚÎ²°ÍµÄÉÏ±ß£¬ÉßÎ²ÏòÉÏ
+		{
+			putimage(snake.x[i], snake.y[i], &img[4]);
+		}	
+		else if (snake.y[i - 1] > snake.y[i])		//µ¹ÊıµÚÒ»½ÚÔÚÎ²°ÍµÄÏÂ±ß£¬ÉßÎ²ÏòÏÂ
+		{
+			putimage(snake.x[i], snake.y[i], &img[5]);
+		}	
+		else if (snake.x[i - 1] < snake.x[i])		//µ¹ÊıµÚÒ»½ÚÔÚÎ²°ÍµÄ×ó±ß£¬ÉßÎ²Ïò×ó
+		{
+			putimage(snake.x[i], snake.y[i], &img[6]);
+		}
+		else if (snake.x[i - 1] > snake.x[i])		//µ¹ÊıµÚÒ»½ÚÔÚÎ²°ÍµÄÓÒ±ß£¬ÉßÎ²ÏòÓÒ
+		{
+			putimage(snake.x[i], snake.y[i], &img[7]);
+		}
+	}
+	
+	/*	»­ÉßÍ·	*/
 	putimage(snake.x[0], snake.y[0], &img[1]);
 
 }
-//è´´å›¾ç”»é£Ÿç‰©
+
+//ÌùÍ¼»­Ê³Îï
 void ShowFood()
 {
 	putimage(food.x, food.y, &img[3]);
 }
-//è›‡çš„ç§»åŠ¨
+
+//ÉßµÄÒÆ¶¯
 void MoveSnake()
 {
-	//æŠŠè›‡çš„åä¸€èŠ‚åæ ‡ç§»åŠ¨åˆ°å‰ä¸€èŠ‚çš„åæ ‡ä½ç½®
-	for (int i = snake.len - 1; i > 0; --i)
+	//°ÑÉßµÄºóÒ»½Ú×ø±êÒÆ¶¯µ½Ç°Ò»½ÚµÄ×ø±êÎ»ÖÃ
+	for (int i = snake.len; i > 0; --i)
 	{
 		snake.x[i] = snake.x[i - 1];
 		snake.y[i] = snake.y[i - 1];
 	}
-	//å•ç‹¬ç§»åŠ¨è›‡å¤´ï¼Œæ ¹æ®è›‡çš„æ–¹å‘ç§»åŠ¨
+	//µ¥¶ÀÒÆ¶¯ÉßÍ·£¬¸ù¾İÉßµÄ·½ÏòÒÆ¶¯
 	switch (snake.direction)
 	{
 	case right:
@@ -298,43 +319,45 @@ void MoveSnake()
 	}
 }
 
-
-
-/*getchå‡½æ•°ä»æ§åˆ¶å°è¯»å–å•ä¸ªå­—ç¬¦è€Œä¸å›æ˜¾ï¼Œå‡½æ•°ä¸èƒ½å»è¯»å–CTRL+Cï¼Œå½“è¯»å–ä¸€ä¸ª
-	åŠŸèƒ½é”®æˆ–æ–¹å‘é”®ï¼Œå‡½æ•°å¿…é¡»è°ƒç”¨ä¸¤æ¬¡ï¼ˆè¿™å°±è¯´æ˜å¯ä»¥ç”¨è¿™ä¸ªå‡½æ•°å»ç›‘æ§åŠŸèƒ½é”®
-	å’Œæ–¹å‘é”®ï¼‰ï¼Œç¬¬ä¸€æ¬¡è°ƒç”¨è¿”å›0æˆ–0xe0ï¼Œç¬¬äºŒæ¬¡è¿”å›å®é™…çš„é”®ä»£ç */
-	//æ§åˆ¶
+// °´¼ü´¦Àí
 void KeyDown()
 {
-	char tmp = _getch();			//æ¥å—_getch()çš„ç¬¬ä¸€ä¸ªè¿”å›å€¼ï¼Œæˆ–éåŠŸèƒ½æŒ‰é”®
-	if (tmp == -32 || tmp == 0) {}				//åŠŸèƒ½é”®ï¼Œ_getch()ç¬¬ä¸€ä¸ªè¿”å›å€¼ -32\'?' æˆ–0
-	else if (tmp == ' ')				//åˆ¤å®šç©ºæ ¼æš‚åœ
-	{
-		TCHAR ss[] = _T("æš‚åœï¼ŒæŒ‰ä¸‹ç©ºæ ¼ç»§ç»­");
-		outtextxy(WIDE * 3 / 10, HIGH / 2, ss);
-	suspend:
-		while (!_kbhit()); // æ²¡æœ‰æŒ‰é”®å°±æ­»å¾ªç¯   æŒ‰ä¸‹ä»»æ„é”®å¼€å§‹
-		if (_getch() != ' ')	goto suspend;
-		FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-		return;
-	}
-	else if (tmp == 27)				//åˆ¤å®šEsc
-	{
-		TCHAR s[] = _T("å³å°†é€€å‡ºæ¸¸æˆï¼Œè¯·ç¡®è®¤:Escé”® ç¡®è®¤");
-		TCHAR s1[] = _T("          æŒ‰ä»»æ„é”®å–æ¶ˆ");
-		outtextxy(WIDE * 3 / 10, HIGH / 2, s);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
-		outtextxy(WIDE * 3 / 10, HIGH / 2 + 40, s1);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
-		while (!_kbhit()); // æ²¡æœ‰æŒ‰é”®å°±æ­»å¾ªç¯   æŒ‰ä¸‹ä»»æ„é”®å¼€å§‹
-		if (_getch() == 27)	 exit(0);
-		return;
-	}
-	else return;
+	// ÔİÍ££¬ÍË³ö
+	char tmp = _getch();
 
-	char key = _getch();		//æ¥å—é”®ç›˜é”®å…¥çš„å€¼
+	if (tmp == ' ')				//ÅĞ¶¨¿Õ¸ñ ÔİÍ£
+	{
+		TCHAR ss[] = _T("ÔİÍ££¬°´ÏÂÈÎÒâ¼ü¼ÌĞø");
+		outtextxy(WIDTH * 3 / 10, HIGHT / 2, ss);
+		tmp = _getch();
+		if (tmp == ' ') return;
+	}
+	else if (tmp == Esc)				//ÅĞ¶¨Esc
+	{
+		TCHAR s[] = _T("¼´½«ÍË³öÓÎÏ·£¬ÇëÈ·ÈÏ:Esc¼ü È·ÈÏ");
+		TCHAR s1[] = _T("          °´ÈÎÒâ¼üÈ¡Ïû");
+		outtextxy(WIDTH * 3 / 10, HIGHT / 2, s);		//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
+		outtextxy(WIDTH * 3 / 10, HIGHT / 2 + 40, s1);	//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
+		tmp = _getch();
+		if (tmp == 27)	 exit(0);		// ÍË³ö
+	}
+	else if (tmp == -32 || tmp == 0) 
+	{
+		// ¡ü¡ı¡û¡úµÈ°´¼ü£¬F1¡¢F2µÈ°´¼ü£¬ÓĞÁ½¸ö¼üÖµ
+		// µÚ¶ş¸öÊÇÕæÊµ¼üÖµ£¬ÔÚÏÂÃæÓÃ key = _getch(); ½ÓÊÕ
+	}	
+	else 
+	{
+		// ¼üÅÌÉÏ a\b\c\d µÈ°´¼ü£¬ÕâÀï²»×ö´¦Àí¡£
+		return;
+	}
+
+	// ÉÏÏÂ×óÓÒ£¬¼ÓËÙ¼õËÙ
+	char key = _getch();
 	switch (key)
 	{
 	case right:
-		if (snake.direction != left)	//ä¸èƒ½ç›¸åæ–¹å‘ç§»åŠ¨
+		if (snake.direction != left)	//²»ÄÜÏà·´·½ÏòÒÆ¶¯
 			snake.direction = right;
 		break;
 	case left:
@@ -349,16 +372,16 @@ void KeyDown()
 		if (snake.direction != up)
 			snake.direction = down;
 		break;
-	case 59:		//F1åŠ é€Ÿ
-		if (speed > 20)
+	case F1:		//F1¼ÓËÙ
+		if (g_speed > 20)
 		{
-			speed -= 20;
+			g_speed -= 20;
 		}
 		break;
-	case 60:		//F2å‡é€Ÿ
-		if (speed < 280)
+	case F2:		//F2¼õËÙ
+		if (g_speed < 280)
 		{
-			speed += 30;
+			g_speed += 30;
 		}
 		break;
 	default:
@@ -368,86 +391,104 @@ void KeyDown()
 
 }
 
-
-
-//åƒé£Ÿç‰©
+//³ÔÊ³Îï
 void EatFood()
 {
 	if (food.x == snake.x[0] && food.y == snake.y[0])
 	{
 		++snake.len;
-		snake.count += 10;	//ä¸€ä¸ªé£Ÿç‰©ååˆ†
+		snake.count += 10;	//Ò»¸öÊ³ÎïÊ®·Ö
 		food.flg = 0;
 	}
 
 }
 
-
-
-//æ­»äº¡
-int GameOver()
+//ÓÎÏ·½áÊø
+void GameOver()
 {
-	//é€šå…³
-	if (snake.len == LEN)		//æœ€é•¿é•¿åº¦
+	//Í¨¹Ø
+	if (snake.len == MAX_SIZE)		//×î³¤³¤¶È
 	{
-		TCHAR s[100];
-		_stprintf(s, _T("æ­å–œ é€šå…³ GameOver!\næ‚¨çš„åˆ†æ•°ä¸º%dåˆ†"), snake.count);
-
-		//putimage(0,0,&tips[2]);	//è´´å›¾ï¼Œç»“æŸç•Œé¢
-		setbkmode(TRANSPARENT);		//æ–‡å­—é€æ˜æ–¹å¼
-		settextcolor(LIGHTBLUE);	//æ–‡å­—é¢œè‰²
-		outtextxy(WIDE * 2 / 10, HIGH / 2, s);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
-		return 1;
+		g_status = 1;
+		return;
 	}
 
-	//æ’å¢™
-	else if (snake.x[0] < SIZE || snake.x[0] >= WIDE - FORM - SIZE ||		//æ¨ªåæ ‡å‡ºç•Œ
-		snake.y[0]<SIZE || snake.y[0]>HIGH - SIZE * 2)		//çºµåæ ‡å‡ºç•Œ
+	//×²Ç½
+	else if (snake.x[0] < SIZE || snake.x[0] >= WIDTH - FORM - SIZE ||		//ºá×ø±ê³ö½ç
+		snake.y[0]<SIZE || snake.y[0]>HIGHT - SIZE * 2)		//×İ×ø±ê³ö½ç
 	{
-		TCHAR s[100];
-		_stprintf(s, _T("ä½ æ’å¢™äº† GameOver!\næ‚¨çš„åˆ†æ•°ä¸º%dåˆ†"), snake.count);
-
-		setbkmode(TRANSPARENT);			//æ–‡å­—é€æ˜æ–¹å¼
-		settextcolor(LIGHTBLUE);		//æ–‡å­—é¢œè‰²
-		outtextxy(WIDE * 2 / 10, HIGH / 2, s);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
-		return 1;
+		g_status = 2;
+		return;
 	}
 
 	for (int i = 1; i < snake.len; i++)
 	{
-		//æ’è‡ªå·±
+		//×²×Ô¼º
 		if (snake.x[i] == snake.x[0] && snake.y[i] == snake.y[0])
 		{
-			TCHAR s[100];
-			_stprintf(s, _T("å’¬åˆ°è‡ªå·±äº† GameOver!\næ‚¨çš„åˆ†æ•°ä¸º%dåˆ†"), snake.count);
-
-			setbkmode(TRANSPARENT);			//æ–‡å­—é€æ˜æ–¹å¼
-			settextcolor(LIGHTBLUE);		//æ–‡å­—é¢œè‰²
-			outtextxy(WIDE * 2 / 10, HIGH / 2, s);	//æŒ‡å®šä½ç½®è¾“å‡ºå­—ç¬¦ä¸²
-
-			return 1;
+			g_status = 3;
+			return;
 		}
 	}
 
-	return 0;
 }
 
+//½áÊø»­Ãæ
+int EndScreen()
+{
+	if (g_status == 0) // ÓÎÏ·Ã»½áÊø
+	{
+		return 0;
+	}
+
+	TCHAR s[100] = "", s2[50] = "";
+	if (g_status == 1)
+	{
+		_stprintf(s, _T("¹§Ï² Í¨¹Ø GameOver!\nÄúµÄ·ÖÊıÎª%d·Ö"), snake.count);
+	}
+	else if (g_status == 2)
+	{
+		_stprintf(s, _T("Äã×²Ç½ÁË GameOver!\nÄúµÄ·ÖÊıÎª%d·Ö"), snake.count);
+	}
+	else if (g_status == 3)
+	{
+		_stprintf(s, _T("Ò§µ½×Ô¼ºÁË GameOver!\nÄúµÄ·ÖÊıÎª%d·Ö"), snake.count);
+	}
+	_stprintf(s2, _T("       °´ÈÎÒâ¼ü½áÊø....\n"));
+
+	ShowSnake();			//»­Éß£¬ÏÔÊ¾ËÀÍö×´Ì¬
+	setbkmode(TRANSPARENT);		//ÎÄ×ÖÍ¸Ã÷·½Ê½
+	settextcolor(LIGHTBLUE);	//ÎÄ×ÖÑÕÉ«
+
+	// ½áÊøÎÄ×Ö·ÖÊıÌáÊ¾
+	outtextxy(WIDTH * 2 / 10 + SIZE, HIGHT / 2 , s);		//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
+	outtextxy(WIDTH * 2 / 10 + SIZE, HIGHT / 2 + SIZE, s2);	//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
+
+	// ½áÊøÍ¼Æ¬Õ¹Ê¾
+	system("pause");
+	putimage(0, 0, &tips[2]);		//ÌùÍ¼£¬½áÊø½çÃæ
+	outtextxy(WIDTH * 2 / 10 + SIZE, HIGHT / 2 + SIZE/2, s);	//Ö¸¶¨Î»ÖÃÊä³ö×Ö·û´®
+	return 1;
+
+}
+
+// »­Ç½
 void  DrawWall()
 {
-	for (int i = 0; i < WIDE - FORM; i += SIZE)
+	for (int i = 0; i < WIDTH - FORM; i += SIZE)
 	{
 		putimage(i, 0, &img[0]);
 	}
-	for (int i = 0; i < WIDE - FORM; i += SIZE)
+	for (int i = 0; i < WIDTH - FORM; i += SIZE)
 	{
-		putimage(i, HIGH - SIZE, &img[0]);
+		putimage(i, HIGHT - SIZE, &img[0]);
 	}
-	for (int j = 0; j < WIDE - FORM; j += SIZE)
+	for (int j = 0; j < WIDTH - FORM; j += SIZE)
 	{
 		putimage(0, j, &img[0]);
 	}
-	for (int j = 0; j < WIDE - FORM; j += SIZE)
+	for (int j = 0; j < WIDTH - FORM; j += SIZE)
 	{
-		putimage(WIDE - FORM - SIZE, j, &img[0]);
+		putimage(WIDTH - FORM - SIZE, j, &img[0]);
 	}
 }
